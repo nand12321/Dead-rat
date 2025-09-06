@@ -1,31 +1,27 @@
 local transition = {}
 
 function transition:enter(previous, state, time, fadeOut)
-    if fadeOut == true then
-        self.previousState = previous
-    end
+    self.previousState = fadeOut and previous or nil
     self.nextState = state
-    self.duration = time
+    self.duration = time or 0.5
     self.alpha = 0
     self.transitioning = true
-    self.fadeOut = true
+    self.fadeOut = fadeOut
 end
 
 function transition:update(dt)
-    if self.transitioning then
-        if self.fadeOut then
-            self.alpha = self.alpha + dt / self.duration
-            if self.alpha >= 1 then
-                self.alpha = 1
-                self.fadeOut = false
-                GameState.switch(self.nextState)
-            end
-        else
-            self.alpha = self.alpha - dt / self.duration
-            if self.alpha <= 0 then
-                self.alpha = 0
-                self.transitioning = false
-            end
+    if not self.transitioning then return end
+
+    if self.fadeOut then
+        self.alpha = math.min(self.alpha + dt / self.duration, 1)
+        if self.alpha >= 1 then
+            self.fadeOut = false
+            GameState.switch(self.nextState)
+        end
+    else
+        self.alpha = math.max(self.alpha - dt / self.duration, 0)
+        if self.alpha <= 0 then
+            self.transitioning = false
         end
     end
 end

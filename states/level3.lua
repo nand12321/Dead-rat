@@ -1,5 +1,13 @@
 local level3 = {}
 
+-- Constants
+local BG_LIGHT_START_X = 1300
+local BG_LIGHT_START_Y = 1300
+local BG_LIGHT_SPEED = 100
+local BG_LIGHT_REMOVE_X = -1300
+local BG_LIGHT_MAX = 120
+local BG_LIGHT_INTERVAL = 1
+
 function level3:enter()
     self.gamePlay = true
     self.restartTimer = 2
@@ -22,18 +30,19 @@ function level3:enter()
     self.backgroundLight = love.graphics.newImage("assets/tileset/background-light.png")
     self.backgroundLights = {}
     self.backgroundTimer = 0
-    self.backgroundStartX = 1300
-    self.backgroundStartY = 1300
-    for i = 0, 100 do
-        table.insert(self.backgroundLights, {x = self.backgroundStartX, y = self.backgroundStartY, sprite = self.backgroundLight})
-        self.backgroundStartX = self.backgroundStartX - 100
-        self.backgroundStartY = self.backgroundStartY - 100
+
+    -- Pre-populate background lights
+    local x, y = BG_LIGHT_START_X, BG_LIGHT_START_Y
+    for i = 1, 100 do
+        table.insert(self.backgroundLights, {x = x, y = y, sprite = self.backgroundLight})
+        x = x - BG_LIGHT_SPEED
+        y = y - BG_LIGHT_SPEED
     end
 
     -- Static objects --
-    self.grounds = {} -- Grounds player can jump on
+    self.grounds = {}
     if self.map.layers["ground"].objects then
-        for i, obj in pairs(self.map.layers["ground"].objects) do
+        for i, obj in ipairs(self.map.layers["ground"].objects) do
             if obj.width > 0 and obj.height > 0 then
                 local ground = self.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
                 ground:setType("static")
@@ -45,9 +54,9 @@ function level3:enter()
         end
     end
 
-    self.platforms = {} -- Player cannot jump on these
+    self.platforms = {}
     if self.map.layers["wall"].objects then
-        for i, obj in pairs(self.map.layers["wall"].objects) do
+        for i, obj in ipairs(self.map.layers["wall"].objects) do
             if obj.width > 0 and obj.height > 0 then
                 local platform = self.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
                 platform:setType("static")
@@ -59,9 +68,9 @@ function level3:enter()
         end
     end
 
-    self.spikes = {} -- spikes will kill the player
+    self.spikes = {}
     if self.map.layers["spike"].objects then
-        for i, obj in pairs(self.map.layers["spike"].objects) do
+        for i, obj in ipairs(self.map.layers["spike"].objects) do
             if obj.width > 0 and obj.height > 0 then
                 local spike = self.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
                 spike:setType("static")
@@ -82,18 +91,35 @@ function level3:enter()
 
     -- Entities --
     self.player = player(self.world, 20, 260)
-    -- self.player.sleep = false
     self.enemys = {
         enemy(self.world, 200, 80, 100, 600, "right"),
         enemy(self.world, 300, 230, 40, 400, "left")
     }
 end
 
+local function updateBackgroundLights(self, dt)
+    if self.backgroundTimer < 0 and #self.backgroundLights < BG_LIGHT_MAX then
+        table.insert(self.backgroundLights, {x = BG_LIGHT_START_X, y = BG_LIGHT_START_Y, sprite = self.backgroundLight})
+        self.backgroundTimer = BG_LIGHT_INTERVAL
+    else
+        self.backgroundTimer = self.backgroundTimer - dt
+    end
+
+    for i = #self.backgroundLights, 1, -1 do
+        local v = self.backgroundLights[i]
+        if v.x < BG_LIGHT_REMOVE_X then
+            table.remove(self.backgroundLights, i)
+        else
+            v.x = v.x - BG_LIGHT_SPEED * dt
+            v.y = v.y - BG_LIGHT_SPEED * dt
+        end
+    end
+end
+
 function level3:update(dt)
     self.world:update(dt)
     if self.gamePlay then
         self.player:update(dt)
-
         for _, enemy in ipairs(self.enemys) do
             enemy:update(dt)
         end
@@ -107,7 +133,7 @@ function level3:update(dt)
             GameState.switch(transition, level4, 0.5, true)
         end
     end
-    
+
     if self.player.isDead == true then
         if self.restartTimer < 0 then
             GameState.switch(transition, level3, 0.5, true)
@@ -117,32 +143,16 @@ function level3:update(dt)
             self.restartTimer = self.restartTimer - dt
         end
     end
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
-    -- background stuff --
-    if self.backgroundTimer < 0 then
-        table.insert(self.backgroundLights, {x = 1300, y = 1300, sprite = self.backgroundLight})
-        self.backgroundTimer = 1
-    else
-        self.backgroundTimer = self.backgroundTimer - dt
-    end
 
-    for i = #self.backgroundLights, 1, -1 do
-        local v = self.backgroundLights[i]
-        if v.x < -1300 then
-            table.remove(self.backgroundLights, i)
-        else
-            v.x = v.x - 100 * dt
-            v.y = v.y - 100 * dt
-        end
-    end    
+    updateBackgroundLights(self, dt)
 end
 
 function level3:draw()
     love.graphics.push()
     love.graphics.scale(2)
 
-    love.graphics.draw( self.background, 0, 0)
-    for i, v in ipairs(self.backgroundLights) do
+    love.graphics.draw(self.background, 0, 0)
+    for _, v in ipairs(self.backgroundLights) do
         love.graphics.draw(v.sprite, v.x, v.y)
     end
 
@@ -151,7 +161,7 @@ function level3:draw()
     for _, enemy in ipairs(self.enemys) do
         enemy:draw()
     end
-    -- self.world:draw()
+
     love.graphics.pop()
 end
 

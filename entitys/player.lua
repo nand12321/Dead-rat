@@ -1,5 +1,9 @@
 player = Object:extend(Object)
 
+local JUMP_IMPULSE = -600
+local FLIES_TIMER_MAX = 3
+local FRICTION_THRESHOLD = 30
+
 function player:new(world, x, y)
     self.gameStarted = false
     self.world = world
@@ -25,7 +29,8 @@ function player:new(world, x, y)
     self.state = "idleRight"
     self.animations = {}
     self.wasSleeping = false
-    self.fliesTimer = 3
+    self.fliesTimer = FLIES_TIMER_MAX
+    self.currentCollisionClass = "player"
 
     animation:loadAnimation(self.animations,"idleRight", "assets/player/idle/right")
     animation:loadAnimation(self.animations,"idleLeft", "assets/player/idle/left")
@@ -69,7 +74,7 @@ function player:update(dt)
             self.state = "runLeft"
             self.collider:applyForce(-self.acceleration, 0)
         else
-            if math.abs(px) < 30 then
+            if math.abs(px) < FRICTION_THRESHOLD then
                 self.collider:setLinearVelocity(0, py)
             elseif px > 10 then
                 self.collider:applyForce(-self.friction, 0)
@@ -98,7 +103,7 @@ function player:update(dt)
     end
 
     if not self.sleep and love.keyboard.isDown("up") and self.isGround then
-        self.collider:applyLinearImpulse(0, -600)
+        self.collider:applyLinearImpulse(0, JUMP_IMPULSE)
         sounds.jump:play()
     end
 
@@ -130,17 +135,33 @@ function player:update(dt)
         end
     end
 
-    if self.sleep then
+    -- Only set collision class when state changes
+    if self.sleep and self.currentCollisionClass ~= "sleep" then
         self.collider:setCollisionClass("sleep")
-        self.state = "sleep"
+        self.currentCollisionClass = "sleep"
+    elseif not self.sleep and self.currentCollisionClass ~= "player" then
+        self.collider:setCollisionClass("player")
+        self.currentCollisionClass = "player"
+    end
 
+    -- Clamp position instead of impulse for out-of-bounds
+    local px, py = self.collider:getX(), self.collider:getY()
+    if px < 0 then
+        self.collider:setX(0)
+    elseif px + self.width > love.graphics.getWidth() then
+        self.collider:setX(love.graphics.getWidth() - self.width)
+    end
+
+    -- Use constants for timer
+    if self.sleep then
+        self.state = "sleep"
         if self.fliesTimer < 0 then
             self.state = "flies"
         else
             self.fliesTimer = self.fliesTimer - dt
         end
     else
-        self.fliesTimer = 3
+        self.fliesTimer = FLIES_TIMER_MAX
     end
 
     if self.collider:enter("enemy") then
@@ -153,13 +174,6 @@ function player:update(dt)
 
     if self.collider:enter("spike") then
         self.isDead = true
-    end
-
-    -- prevent player from going out of bounds
-    if self.collider:getX() < 0 then
-        self.collider:applyLinearImpulse(200, 0)
-    elseif self.collider:getX() + self.width > love.graphics.getWidth() then
-        self.collider:applyLinearImpulse(-200, 0)
     end
 
     self.wasSleeping = isSleepKeyPressed

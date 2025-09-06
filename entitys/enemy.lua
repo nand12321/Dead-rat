@@ -1,3 +1,7 @@
+local TIMER_RESET = 3
+local VELOCITY_THRESHOLD = 10
+local FRICTION_SCALE = 0.0005
+
 enemy = Object:extend(Object)
 
 function enemy:new(world, x, y, movement, watchArea, direction)
@@ -18,7 +22,7 @@ function enemy:new(world, x, y, movement, watchArea, direction)
     self.dir = direction
     self.movement = movement
     self.spot = self.collider:getX()
-    self.timer = 3
+    self.timer = TIMER_RESET
 
     self.animations = {}
     animation:loadAnimation(self.animations,"idleRight", "assets/player/idle/right")
@@ -66,7 +70,7 @@ function enemy:update(dt)
             if self.timer < 0 then
                 self.dir = "left"
                 self.state = "runLeft"
-                self.timer = 3
+                self.timer = TIMER_RESET
             else
                 self.state = "idleRight"
                 self.timer = self.timer - dt
@@ -79,7 +83,7 @@ function enemy:update(dt)
             if self.timer < 0 then
                 self.dir = "right"
                 self.state = "runRight"
-                self.timer = 3
+                self.timer = TIMER_RESET
             else
                 self.state = "idleLeft"
                 self.timer = self.timer - dt
@@ -88,9 +92,9 @@ function enemy:update(dt)
     end
 
     -- apply friction
-    if math.abs(px) > 10 then
-        self.collider:applyForce(-px * self.friction * 0.0005, 0)
-    elseif math.abs(px) < 10 then
+    if math.abs(px) > VELOCITY_THRESHOLD then
+        self.collider:applyForce(-px * self.friction * FRICTION_SCALE, 0)
+    elseif math.abs(px) < VELOCITY_THRESHOLD then
         self.collider:setLinearVelocity(0, py)
     end
     
